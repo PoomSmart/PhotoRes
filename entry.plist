@@ -1,0 +1,10 @@
+{
+	entry = {
+		bundle = "PhotoResSettings";
+		cell = PSLinkCell;
+		detail = "PhotoResPreferenceController";
+		icon = "PR.png";
+		isController = 1;
+		label = "PhotoRes";
+	};
+}
