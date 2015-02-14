@@ -37,7 +37,7 @@ static void readAspectRatio(int index)
 			specificRatioSize = CGSizeMake(11, 8); // 1.375
 			break;
 		case 9:
-			specificRatioSize = CGSizeMake(1.6180, 1);
+			specificRatioSize = CGSizeMake(1.618, 1);
 			break;
 		case 10:
 			specificRatioSize = CGSizeMake(1.85, 1);
@@ -69,19 +69,29 @@ BOOL noCleanup;
 
 %end
 
+%hook CAMCaptureController
+
+- (void)_completedWriteForResponse:(id)arg1 request:(id)arg2 error:(id)arg3
+{
+	%orig;
+	if (noCleanup) {
+		dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.3*NSEC_PER_SEC), dispatch_get_main_queue(), ^(void){
+			UIImage *thumbnail = [[%c(DCIMImageWellUtilities) cameraPreviewWellImage] retain];
+			[[(CAMCameraView *)[self delegate] _imageWell] setThumbnailImage:thumbnail animated:YES];
+			[thumbnail release];
+			noCleanup = NO;
+		});
+	}
+}
+
+%end
+
 %hook CAMCameraView
 
 - (void)captureController:(id)arg1 didCompleteResponse:(CAMStillImageCaptureResponse *)response forStillImageRequest:(id)arg3 error:(id)arg4
 {
-	%log;
 	noCleanup = [response thumbnailImage] == nil;
 	%orig;
-	if (noCleanup) {
-		UIImage *thumbnail = [[%c(DCIMImageWellUtilities) cameraPreviewWellImage] retain];
-		[[self _imageWell] setThumbnailImage:thumbnail animated:YES];
-		[thumbnail release];
-		noCleanup = NO;
-	}
 }
 
 %end
