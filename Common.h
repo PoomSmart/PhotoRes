@@ -1,28 +1,33 @@
 #import <AVFoundation/AVFoundation.h>
 #import "../PS.h"
 
+@interface AVCaptureDevice (Private)
+- (AVCaptureSession *)session;
+@end
+
 @interface AVCaptureConnection (Private)
 - (AVCaptureDevice *)sourceDevice;
+@end
+
+@interface AVCaptureSession (Private)
+- (NSMutableDictionary *)captureOptions;
 @end
 
 @interface AVCaptureStillImageOutput (Private)
 @property BOOL squareCropEnabled;
 @property CGSize previewImageSize;
+- (AVCaptureConnection *)firstActiveConnection;
 @end
 
 @interface AVCaptureDeviceFormat (Private)
 - (CMVideoDimensions)sensorDimensions;
 @end
 
-@interface AVCaptureDeviceFormatInternal : NSObject
+@interface AVCaptureStillImageRequest : NSObject
+@property CGSize previewImageSize;
 @end
- 
-@interface FigCaptureStillImageSettings : NSObject
-@property NSUInteger outputWidth;
-@property NSUInteger outputHeight;
-@property NSUInteger thumbnailWidth;
-@property NSUInteger thumbnailHeight;
-@property BOOL thumbnailEnabled;
+
+@interface AVCaptureDeviceFormatInternal : NSObject
 @end
 
 @interface DCIMImageWellUtilities : NSObject
@@ -35,10 +40,6 @@
 
 @interface CAMImageWell : UIView
 - (void)setThumbnailImage:(UIImage *)image animated:(BOOL)animated;
-@end
-
-@interface CAMCameraView : UIView
-- (CAMImageWell *)_imageWell;
 @end
 
 NSString *const tweakKey = @"PREnabled";

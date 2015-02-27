@@ -12,7 +12,7 @@ __attribute__((visibility("hidden")))
 static CGSize resolutionFromAVCaptureDeviceFormat(AVCaptureDeviceFormat *format)
 {
 	CGSize res = CGSizeZero;
-	if (isiOS8) {
+	if (isiOS8Up) {
 		CMVideoDimensions dimension8 = format.highResolutionStillImageDimensions;
 		res = (CGSize){dimension8.width, dimension8.height};
 	}
@@ -34,7 +34,7 @@ static CGSize bestPhotoResolution()
 {
 	NSUInteger pixels = 0;
 	NSUInteger index = 0;
-	NSArray *formats = [[AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo] formats];
+	NSArray *formats = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo].formats;
 	for (AVCaptureDeviceFormat *format in formats) {
 		CGSize dimension = resolutionFromAVCaptureDeviceFormat(format);
 		NSUInteger eachPixels = dimension.width * dimension.height;

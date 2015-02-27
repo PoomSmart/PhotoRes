@@ -8,6 +8,8 @@ int ratioIndex;
 CGSize specificRatioSize;
 
 BOOL overrideRes;
+NSInteger overrideWidth;
+NSInteger overrideHeight;
 
 static void readAspectRatio(int index)
 {
@@ -56,51 +58,10 @@ static void readAspectRatio(int index)
 
 %group iOS8
 
-BOOL noCleanup;
-
-%hook CAMImageWell
-
-- (void)recoverFromFailedThumbnailUpdate
-{
-	if (noCleanup)
-		return;
-	%orig;
-}
-
-%end
-
-%hook CAMCaptureController
-
-- (void)_completedWriteForResponse:(id)arg1 request:(id)arg2 error:(id)arg3
-{
-	%orig;
-	if (noCleanup) {
-		dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.3*NSEC_PER_SEC), dispatch_get_main_queue(), ^(void){
-			UIImage *thumbnail = [[%c(DCIMImageWellUtilities) cameraPreviewWellImage] retain];
-			[[(CAMCameraView *)[self delegate] _imageWell] setThumbnailImage:thumbnail animated:YES];
-			[thumbnail release];
-			noCleanup = NO;
-		});
-	}
-}
-
-%end
-
-%hook CAMCameraView
-
-- (void)captureController:(id)arg1 didCompleteResponse:(CAMStillImageCaptureResponse *)response forStillImageRequest:(id)arg3 error:(id)arg4
-{
-	noCleanup = [response thumbnailImage] == nil;
-	%orig;
-}
-
-%end
-
 %hook AVCaptureStillImageOutput
 
 - (FigCaptureStillImageSettings *)_figCaptureStillImageSettingsForConnection:(AVCaptureConnection *)connection
 {
-	FigCaptureStillImageSettings *settings = %orig;
 	BOOL square = self.squareCropEnabled;
 	if (!square) {
 		AVCaptureDeviceFormat *format = [connection sourceDevice].activeFormat;
@@ -112,19 +73,29 @@ BOOL noCleanup;
 		if (ratioIndex != 0)
 			myRes = AVMakeRectWithAspectRatioInsideRect(specificRatioSize, myRes);
 		if (specificSize || ratioIndex != 0) {
-			settings.outputWidth = myRes.size.width;
-			settings.outputHeight = myRes.size.height;
-			BOOL thumbnail = settings.thumbnailEnabled;
-			if (thumbnail) {
-				CGSize previewImageSize = self.previewImageSize;
-				CGRect boundingRect = CGRectMake(0, 0, previewImageSize.width, previewImageSize.height);
-				CGRect imageFinalRect = AVMakeRectWithAspectRatioInsideRect(myRes.size, boundingRect);
-				settings.thumbnailWidth = imageFinalRect.size.width;
-				settings.thumbnailHeight = imageFinalRect.size.height;
-			}
+			overrideRes = YES;
+			overrideWidth = myRes.size.width;
+			overrideHeight = myRes.size.height;
+			FigCaptureStillImageSettings *settings = %orig;
+			overrideRes = NO;
+			return settings;
 		}
 	}
-	return settings;
+	return %orig;
+}
+
+%end
+
+%hook FigCaptureStillImageSettings
+
+- (void)setOutputWidth:(NSInteger)width
+{
+	%orig(overrideRes ? overrideWidth : width);
+}
+
+- (void)setOutputHeight:(NSInteger)height
+{
+	%orig(overrideRes ? overrideHeight : height);
 }
 
 %end
@@ -135,12 +106,36 @@ BOOL noCleanup;
 
 %hook AVCaptureStillImageOutput
 
-- (void)configureAndInitiateCopyStillImageForRequest:(id)arg1
+- (void)configureAndInitiateCopyStillImageForRequest:(AVCaptureStillImageRequest *)request
 {
 	if ([self respondsToSelector:@selector(squareCropEnabled)])
 		overrideRes = !self.squareCropEnabled;
 	else
 		overrideRes = YES;
+	/*if (overrideRes) {
+		AVCaptureDevice *captureDevice = [[self firstActiveConnection] sourceDevice];
+		AVCaptureDeviceFormat *format = captureDevice.activeFormat;
+		CMVideoDimensions res = CMVideoFormatDescriptionGetDimensions(format.formatDescription);
+		NSUInteger width = res.width;
+		NSUInteger height = res.height;
+		CGRect boundingOriginalRect = CGRectMake(0, 0, width, height);
+		CGRect myRes = specificSize ? CGRectMake(0, 0, prWidth, prHeight) : boundingOriginalRect;
+		if (ratioIndex != 0)
+			myRes = AVMakeRectWithAspectRatioInsideRect(specificRatioSize, myRes);
+		if (specificSize || ratioIndex != 0) {
+			NSInteger newWidth = myRes.size.width;
+			NSInteger newHeight = myRes.size.height;
+			self.previewImageSize = CGSizeMake(newWidth, newHeight);
+			request.previewImageSize = CGSizeMake(newWidth, newHeight);
+			AVCaptureSession *session = captureDevice.session;
+			[[session captureOptions] setValue:@(newWidth) forKeyPath:@"LiveSourceOptions.Capture.Width"];
+			[[session captureOptions] setValue:@(newHeight) forKeyPath:@"LiveSourceOptions.Capture.Height"];
+			%orig;
+			request.previewImageSize = CGSizeMake(newWidth, newHeight);
+			self.previewImageSize = CGSizeMake(newWidth, newHeight);
+			return;
+		}
+	}*/
 	%orig;
 	overrideRes = NO;
 }
