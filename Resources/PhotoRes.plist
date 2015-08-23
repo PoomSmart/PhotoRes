@@ -57,18 +57,18 @@
 			<key>validTitles</key>
 			<array>
 				<string>Default</string>
-				<string>4:3 (iPad ratio)</string>
+				<string>4:3 (iPad)</string>
 				<string>16:9</string>
 				<string>16:10</string>
 				<string>7:3</string>
-				<string>3:2 (3.5-inches device ratio)</string>
+				<string>3:2 (3.5-inches device)</string>
 				<string>5:3</string>
 				<string>5:4</string>
 				<string>11:8</string>
 				<string>1.618:1</string>
 				<string>1.85:1</string>
 				<string>2.39:1</string>
-				<string>1.775:1 (4-inches device ratio)</string>
+				<string>1.775:1 (4-inches device)</string>
 				<string>1:1 (Squared)</string>
 			</array>
 			<key>validValues</key>

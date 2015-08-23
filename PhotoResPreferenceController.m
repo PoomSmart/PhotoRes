@@ -108,7 +108,7 @@ static CGSize bestPhotoResolution()
 - (NSArray *)specifiers
 {
 	if (_specifiers == nil) {
-		NSMutableArray *specs = [NSMutableArray arrayWithArray:[[self loadSpecifiersFromPlistName:@"PhotoRes" target:self] retain]];
+		NSMutableArray *specs = [NSMutableArray arrayWithArray:[self loadSpecifiersFromPlistName:@"PhotoRes" target:self]];
 		_specifiers = [specs copy];
 	}
 	return _specifiers;
