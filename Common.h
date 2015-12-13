@@ -19,6 +19,13 @@
 - (AVCaptureConnection *)firstActiveConnection;
 @end
 
+@interface FigCaptureIrisStillImageSettings : FigCaptureStillImageSettings
+@end
+
+@interface AVCaptureIrisStillImageOutput : AVCaptureOutput
+- (AVCaptureStillImageOutput *)_sanitizedSettingsForSettings:(FigCaptureStillImageSettings *)settings;
+@end
+
 @interface AVCaptureDeviceFormat (Private)
 - (CMVideoDimensions)sensorDimensions;
 @end

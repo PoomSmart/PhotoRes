@@ -56,6 +56,53 @@ static void readAspectRatio(NSInteger index)
 	}
 }
 
+%group iOS9
+
+%hook AVCaptureIrisStillImageOutput
+
+- (FigCaptureIrisStillImageSettings *)_figCaptureIrisStillImageSettingsForAVCaptureIrisStillImageSettings:(FigCaptureStillImageSettings *)s connections:(NSArray *)connection
+{
+	BOOL square = [self _sanitizedSettingsForSettings:s].squareCropEnabled;
+	if (!square) {
+		AVCaptureDeviceFormat *format = [(AVCaptureConnection *)connection[0] sourceDevice].activeFormat;
+		CMVideoDimensions res = CMVideoFormatDescriptionGetDimensions(format.formatDescription);
+		NSUInteger width = res.width;
+		NSUInteger height = res.height;
+		CGRect boundingOriginalRect = CGRectMake(0, 0, width, height);
+		CGRect myRes = specificSize ? CGRectMake(0, 0, prWidth, prHeight) : boundingOriginalRect;
+		if (ratioIndex != 0)
+			myRes = AVMakeRectWithAspectRatioInsideRect(specificRatioSize, myRes);
+		if (specificSize || ratioIndex != 0) {
+			overrideRes = YES;
+			overrideWidth = myRes.size.width;
+			overrideHeight = myRes.size.height;
+			FigCaptureIrisStillImageSettings *settings = %orig;
+			overrideRes = NO;
+			return settings;
+		}
+	}
+	return %orig;
+}
+
+%end
+
+%hook FigCaptureIrisStillImageSettings
+
+- (void)setOutputWidth:(NSInteger)width
+{
+	%orig(overrideRes ? overrideWidth : width);
+}
+
+- (void)setOutputHeight:(NSInteger)height
+{
+	%orig(overrideRes ? overrideHeight : height);
+}
+
+%end
+
+%end
+
+
 %group iOS8
 
 %hook AVCaptureStillImageOutput
@@ -268,7 +315,11 @@ static void reloadSettings(CFNotificationCenterRef center, void *observer, CFStr
 	letsprefs();
 	if (tweakEnabled) {
 		if (isiOS8Up) {
-			%init(iOS8);
+			if (isiOS9Up) {
+				%init(iOS9);
+			} else {
+				%init(iOS8);
+			}
 		} else {
 			%init(preiOS8);
 			if (isiOS7) {
