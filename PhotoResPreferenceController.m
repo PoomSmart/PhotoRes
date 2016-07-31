@@ -1,12 +1,13 @@
 #import <UIKit/UIKit.h>
-#import <Preferences/PSListController.h>
-#import <Preferences/PSSpecifier.h>
+#import <Cephei/HBListController.h>
+#import <Cephei/HBAppearanceSettings.h>
 #import <Social/Social.h>
 #import <substrate.h>
 #import "Common.h"
+#import "../PSPrefs.x"
+#import <dlfcn.h>
 
-__attribute__((visibility("hidden")))
-@interface PhotoResPreferenceController : PSListController
+@interface PhotoResPreferenceController : HBListController
 @end
 
 static CGSize resolutionFromAVCaptureDeviceFormat(AVCaptureDeviceFormat *format)
@@ -14,18 +15,16 @@ static CGSize resolutionFromAVCaptureDeviceFormat(AVCaptureDeviceFormat *format)
 	CGSize res = CGSizeZero;
 	if (isiOS8Up) {
 		CMVideoDimensions dimension8 = format.highResolutionStillImageDimensions;
-		res = (CGSize){dimension8.width, dimension8.height};
-	}
-	else if (isiOS7) {
+		res = (CGSize){ dimension8.width, dimension8.height };
+	} else if (isiOS7) {
 		CMVideoDimensions dimension7 = [format sensorDimensions];
-		res = (CGSize){dimension7.width, dimension7.height};
-	}
-	else if (isiOS6) {
+		res = (CGSize){ dimension7.width, dimension7.height };
+	} else {
 		AVCaptureDeviceFormatInternal *internal6;
 		object_getInstanceVariable(format, "_internal", (void **)&internal6);
 		NSDictionary *resDict6;
-		object_getInstanceVariable(format, "formatDictionary", (void **)&resDict6);
-		res = (CGSize){[resDict6[@"Width"] floatValue], [resDict6[@"Height"] floatValue]};
+		object_getInstanceVariable(internal6, "formatDictionary", (void **)&resDict6);
+		res = (CGSize){ [resDict6[@"Width"] floatValue], [resDict6[@"Height"] floatValue] };
 	}
 	return res;
 }
@@ -49,14 +48,21 @@ static CGSize bestPhotoResolution()
 
 @implementation PhotoResPreferenceController
 
-- (id)init
+HavePrefs()
+
++ (NSString *)hb_specifierPlist
+{
+	return @"PhotoRes";
+}
+
+- (instancetype)init
 {
 	if (self == [super init]) {
-		UIButton *heart = [[[UIButton alloc] initWithFrame:CGRectZero] autorelease];
-		[heart setImage:[UIImage imageNamed:@"Heart" inBundle:[NSBundle bundleWithPath:@"/Library/PreferenceBundles/PhotoResSettings.bundle"]] forState:UIControlStateNormal];
-		[heart sizeToFit];
-		[heart addTarget:self action:@selector(love) forControlEvents:UIControlEventTouchUpInside];
-		self.navigationItem.rightBarButtonItem = [[[UIBarButtonItem alloc] initWithCustomView:heart] autorelease];
+		HBAppearanceSettings *appearanceSettings = [[HBAppearanceSettings alloc] init];
+		appearanceSettings.tintColor = UIColor.magentaColor;
+		appearanceSettings.tableViewCellTextColor = UIColor.redColor;
+		self.hb_appearanceSettings = appearanceSettings;
+		self.navigationItem.rightBarButtonItem = [[[UIBarButtonItem alloc] initWithTitle:@"♥️" style:UIBarButtonItemStylePlain target:self action:@selector(love)] autorelease];
 	}
 	return self;
 }
@@ -64,25 +70,9 @@ static CGSize bestPhotoResolution()
 - (void)love
 {
 	SLComposeViewController *twitter = [[SLComposeViewController composeViewControllerForServiceType:SLServiceTypeTwitter] retain];
-	[twitter setInitialText:@"#PhotoRes by @PoomSmart is awesome!"];
-	if (twitter != nil)
-		[[self navigationController] presentViewController:twitter animated:YES completion:nil];
+	twitter.initialText = @"#PhotoRes by @PoomSmart is really awesome!";
+	[self.navigationController presentViewController:twitter animated:YES completion:nil];
 	[twitter release];
-}
-
-- (void)apply:(id)param
-{
-	[[super view] endEditing:YES];
-}
-
-- (void)donate:(id)param
-{
-	[[UIApplication sharedApplication] openURL:[NSURL URLWithString:PS_DONATE_URL]];
-}
-
-- (void)twitter:(id)param
-{
-	[[UIApplication sharedApplication] openURL:[NSURL URLWithString:PS_TWITTER_URL]];
 }
 
 - (void)setResValue:(id)value specifier:(PSSpecifier *)spec
@@ -105,13 +95,12 @@ static CGSize bestPhotoResolution()
 	[self reloadSpecifier:spec animated:NO];
 }
 
-- (NSArray *)specifiers
-{
-	if (_specifiers == nil) {
-		NSMutableArray *specs = [NSMutableArray arrayWithArray:[self loadSpecifiersFromPlistName:@"PhotoRes" target:self]];
-		_specifiers = [specs copy];
-	}
-	return _specifiers;
-}
+HaveBanner2(@"PhotoRes", UIColor.magentaColor, @"Photos at any size", UIColor.redColor)
 
 @end
+
+__attribute__((constructor)) static void ctor()
+{
+	if (isiOS56)
+		dlopen("/Library/Application Support/PhotoRes/Workaround_Cephei_iOS56.dylib", RTLD_LAZY);
+}

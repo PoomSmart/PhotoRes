@@ -1,8 +1,7 @@
 Architecture: iphoneos-arm
 Name: PhotoRes
 Package: org.thebigboss.photores
-Version: 1.1
+Version: 1.0
 Author: PoomSmart
-Pre-Depends: firmware (>= 6.0)
-Depends: mobilesubstrate, preferenceloader
-Description: Adjust aspect ratio and resolution for photography.
+Depends: mobilesubstrate, preferenceloader, firmware (>= 6.0), ws.hbang.common (>= 1.2)
+Description: Taking photos at any size.

@@ -1,4 +1,5 @@
 #import "Common.h"
+#import "../PSPrefs.x"
 
 BOOL tweakEnabled;
 BOOL specificSize;
@@ -54,6 +55,17 @@ static void readAspectRatio(NSInteger index)
 			specificRatioSize = CGSizeMake(1, 1);
 			break;
 	}
+}
+
+HaveCallback()
+{
+	GetPrefs()
+	GetBool(tweakEnabled, tweakKey, YES)
+	GetBool(specificSize, specificSizeKey, NO)
+	GetInt(prWidth, widthKey, 0)
+	GetInt(prHeight, heightKey, 0)
+	GetInt(ratioIndex, ratioIndexKey, 0)
+	readAspectRatio(ratioIndex);
 }
 
 %group iOS9
@@ -149,16 +161,11 @@ static void readAspectRatio(NSInteger index)
 
 %end
 
-%group preiOS8
-
 BOOL overridePreviewSize;
 CGSize prPreviewSize = CGSizeZero;
 
-%hook AVCaptureSession
-
-+ (NSMutableDictionary *)_createCaptureOptionsForPreset:(id)preset audioDevice:(id)audio videoDevice:(id)video errorStatus:(int *)error
+NSMutableDictionary *hookCaptureOptions(NSMutableDictionary *orig)
 {
-	NSMutableDictionary *orig = %orig;
 	NSString *prefix = orig[@"OverridePrefixes"];
 	if ([prefix isEqualToString:@"P:"]) {
 		NSUInteger width = [[orig valueForKeyPath:@"LiveSourceOptions.Capture.Width"] integerValue];
@@ -179,7 +186,20 @@ CGSize prPreviewSize = CGSizeZero;
 	return orig;
 }
 
+%group iOS78
+
+%hook AVCaptureSession
+
++ (NSMutableDictionary *)_createCaptureOptionsForPreset:(id)preset audioDevice:(id)audio videoDevice:(id)video errorStatus:(int *)error
+{
+	return hookCaptureOptions(%orig);
+}
+
 %end
+
+%end
+
+%group preiOS8
 
 %hook AVCaptureStillImageOutput
 
@@ -232,7 +252,16 @@ CGSize prPreviewSize = CGSizeZero;
 
 %end
 
-/*%group preiOS7
+%group preiOS7
+
+%hook AVCaptureSession
+
+- (NSMutableDictionary *)_createCaptureOptionsForPreset:(id)preset audioDevice:(id)audio videoDevice:(id)video errorStatus:(int *)error
+{
+	return hookCaptureOptions(%orig);
+}
+
+%end
 
 %hook PLAssetFormats
 
@@ -240,7 +269,7 @@ CGSize prPreviewSize = CGSizeZero;
 {
 	if (overridePreviewSize && !CGSizeEqualToSize(prPreviewSize, CGSizeZero)) {
 		// kill a check from /System/Library/Lockdown/Checkpoint.xml !
-		CGSize correctPreviewSize = CGSizeMake(0.5*prPreviewSize.width, 0.5*prPreviewSize.height);
+		CGSize correctPreviewSize = CGSizeMake(0.5 * prPreviewSize.width, 0.5 * prPreviewSize.height);
 		return correctPreviewSize;
 	}
 	return %orig;
@@ -260,7 +289,7 @@ CGSize prPreviewSize = CGSizeZero;
 
 %end
 
-%end*/
+%end
 
 %group iOS71
 
@@ -292,27 +321,14 @@ CGSize prPreviewSize = CGSizeZero;
 
 %end
 
-static void letsprefs()
-{
-	CFPreferencesAppSynchronize(CFSTR("com.PS.PhotoRes"));
-	NSDictionary *prefs = [NSDictionary dictionaryWithContentsOfFile:PREF_PATH];
-	tweakEnabled = prefs[tweakKey] ? [prefs[tweakKey] boolValue] : YES;
-	specificSize = [prefs[specificSizeKey] boolValue];
-	prWidth = prefs[widthKey] ? [prefs[widthKey] integerValue] : 0;
-	prHeight = prefs[heightKey] ? [prefs[heightKey] integerValue] : 0;
-	ratioIndex = prefs[ratioIndexKey] ? [prefs[ratioIndexKey] integerValue] : 0;
-	readAspectRatio(ratioIndex);
-}
-
-static void reloadSettings(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo)
-{
-	letsprefs();
-}
-
 %ctor
 {
-	CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, &reloadSettings, PreferencesNotification, NULL, CFNotificationSuspensionBehaviorCoalesce);
-	letsprefs();
+	NSString *identifier = NSBundle.mainBundle.bundleIdentifier;
+	BOOL isSpringBoard = [identifier isEqualToString:@"com.apple.springboard"];
+	if (isSpringBoard && isiOS7Up)
+		return;
+	HaveObserver()
+	callback();
 	if (tweakEnabled) {
 		if (isiOS8Up) {
 			if (isiOS9Up) {
@@ -322,16 +338,19 @@ static void reloadSettings(CFNotificationCenterRef center, void *observer, CFStr
 			}
 		} else {
 			%init(preiOS8);
-			if (isiOS7) {
+			if (isiOS7Up) {
 				%init(iOS7);
-			}/* else {
-				%init(preiOS7);
-			}*/
-			if (isiOS71Up) {
-				%init(iOS71);
+				if (isiOS71Up) {
+					%init(iOS71);
+				} else {
+					%init(preiOS71);
+				}
 			} else {
-				%init(preiOS71);
+				%init(preiOS7);
 			}
+		}
+		if (isiOS78) {
+			%init(iOS78);
 		}
 	}
 }
