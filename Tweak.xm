@@ -323,9 +323,7 @@ NSMutableDictionary *hookCaptureOptions(NSMutableDictionary *orig)
 
 %ctor
 {
-	NSString *identifier = NSBundle.mainBundle.bundleIdentifier;
-	BOOL isSpringBoard = [identifier isEqualToString:@"com.apple.springboard"];
-	if (isSpringBoard && isiOS7Up)
+	if (IN_SPRINGBOARD && isiOS7Up)
 		return;
 	HaveObserver()
 	callback();
