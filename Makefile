@@ -1,6 +1,5 @@
 DEBUG = 0
-
-PACKAGE_VERSION = 1.2
+PACKAGE_VERSION = 1.3
 
 include $(THEOS)/makefiles/common.mk
 
@@ -8,10 +7,7 @@ TWEAK_NAME = PhotoRes
 PhotoRes_FILES = Tweak.xm
 PhotoRes_FRAMEWORKS = AVFoundation CoreGraphics CoreMedia UIKit
 
-SUBPROJECTS = Workaround_Cephei_iOS56
-
 include $(THEOS_MAKE_PATH)/tweak.mk
-include $(THEOS_MAKE_PATH)/aggregate.mk
 
 BUNDLE_NAME = PhotoResSettings
 PhotoResSettings_FILES = PhotoResPreferenceController.m
